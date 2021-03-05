@@ -76,7 +76,43 @@ class TaxDetectorTest extends TestCase
         $country = $countryRepository->search($criteria, Context::createDefaultContext())->first();
 
         $customer = $this->createMock(CustomerEntity::class);
-        $customer->expects(static::once())->method('getCompany')->willReturn('ABC Company');
+        $customer->expects(static::once())->method('getVatIds')->willReturn(['DE123123123']);
+
+        $context->expects(static::once())->method('getShippingLocation')->willReturn(
+            ShippingLocation::createFromCountry($country)
+        );
+
+        $context->expects(static::once())->method('getCustomer')->willReturn(
+            $customer
+        );
+
+        $taxDetector = $this->getContainer()->get(TaxDetector::class);
+
+        static::assertTrue($taxDetector->isNetDelivery($context));
+    }
+
+    public function testIsNetDeliveryWithCompanyFreeTaxWithoutCompany(): void
+    {
+        $context = $this->createMock(SalesChannelContext::class);
+
+        $countryRepository = $this->getContainer()->get('country.repository');
+        $criteria = new Criteria();
+        $criteria->addFilter(new EqualsFilter('iso', 'DE'));
+        $criteria->setLimit(1);
+
+        $country = $countryRepository->search($criteria, Context::createDefaultContext())->first();
+        $countryRepository->update([
+            [
+                'id' => $country->getId(),
+                'taxFree' => false,
+                'companyTaxFree' => true,
+                'vatIdPattern' => '(DE)?[0-9]{9}',
+            ],
+        ], Context::createDefaultContext());
+        $country = $countryRepository->search($criteria, Context::createDefaultContext())->first();
+
+        $customer = $this->createMock(CustomerEntity::class);
+        $customer->setCompany('');
         $customer->expects(static::once())->method('getVatIds')->willReturn(['DE123123123']);
 
         $context->expects(static::once())->method('getShippingLocation')->willReturn(
@@ -143,7 +179,6 @@ class TaxDetectorTest extends TestCase
         $deCountry = $countryRepository->search($criteria, Context::createDefaultContext())->first();
 
         $customer = $this->createMock(CustomerEntity::class);
-        $customer->expects(static::once())->method('getCompany')->willReturn('ABC Company');
         $customer->expects(static::once())->method('getVatIds')->willReturn(['VN123123']);
 
         $context->expects(static::once())->method('getShippingLocation')->willReturn(

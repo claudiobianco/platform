@@ -21,7 +21,7 @@ class TaxDetector
 
         $customer = $context->getCustomer();
 
-        if (!$shippingLocationCountry->getCompanyTaxFree() || !$customer || !$customer->getCompany()) {
+        if (!$shippingLocationCountry->getCompanyTaxFree() || !$customer) {
             return false;
         }
 
